@@ -1,3 +1,4 @@
 {
-    "patterns_db_path": "/Users/bertrand/code/vestaboard-patterns/data/patterns.db",    
+    "patterns_db_path": "/Users/bertrand/code/vestaboard-patterns/data/patterns.db",
+    "tronbyt_api_key": "xxx"
 }

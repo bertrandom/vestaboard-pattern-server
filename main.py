@@ -6,6 +6,7 @@ import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import aiohttp
 from appcfg import get_config
 from fastapi import FastAPI
 
@@ -20,6 +21,8 @@ cursor = conn.cursor()
 
 state_conn = sqlite3.connect(STATE_DB_PATH)
 state_cursor = state_conn.cursor()
+
+session = None
 
 async def get_date_cursor():
     state_cursor.execute("SELECT value FROM state WHERE key = 'date_cursor'")
@@ -49,8 +52,11 @@ async def get_date_cursor():
 
 
 @asynccontextmanager
+
 async def lifespan(app: FastAPI):
-    yield
+    async with aiohttp.ClientSession() as session:
+        app.state.http_session = session
+        yield
 
 app = FastAPI(lifespan=lifespan)
 
@@ -74,7 +80,19 @@ async def cursor_previous():
     state_cursor.execute("UPDATE state SET value = ? WHERE key = 'date_cursor'", (result[0],))
     state_conn.commit()
 
+    await update_tronbyt()
+
     return {"ok": True, "date_cursor": result[0]}
+
+async def update_tronbyt():
+    url = "http://nuke.smittn.com:8000/v0/devices/tidbyt/push_app"
+
+    payload = {"app_id": "vestaboard", "background": False}
+
+    await app.state.http_session.post(url, json=payload, headers={
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {config['tronbyt_api_key']}"
+    })
 
 @app.post("/next")
 async def cursor_next():
@@ -95,6 +113,8 @@ async def cursor_next():
 
     state_cursor.execute("UPDATE state SET value = ? WHERE key = 'date_cursor'", (result[0],))
     state_conn.commit()
+
+    await update_tronbyt()
 
     return {"ok": True, "date_cursor": result[0]}
 
