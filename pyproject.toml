@@ -1,0 +1,14 @@
+[project]
+name = "vestaboard-pattern-server"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "appcfg",
+    "fastapi>=0.141.1",
+    "gunicorn>=26.2.0",
+    "uvicorn>=0.52.4",
+]
+[tool.uv.sources]
+appcfg = { git = "https://github.com/bertrandom/appcfg", rev = "8c4970cbcabede7ea335682a20b9cd217b4ded72" }

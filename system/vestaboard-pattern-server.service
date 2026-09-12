@@ -1,0 +1,16 @@
+[Unit]
+Description=vestaboard-pattern-server
+After=network.target
+
+[Service]
+User=web
+WorkingDirectory=/web/vestaboard-pattern-server
+LimitNOFILE=4096
+Environment=ENV=prod
+ExecStart=/snap/bin/uv run gunicorn main:app --capture-output --workers 2 -k uvicorn.workers.UvicornWorker --bind unix:vestaboard-pattern-server.sock --error-logfile /var/log/gunicorn/vestaboard-pattern-server/error.log --log-config=logging.conf
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
