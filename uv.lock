@@ -702,6 +702,15 @@ wheels = [
 ]
 
 [[package]]
+name = "vesta"
+version = "0.14.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/02/0f04197a0cd5b66f0ddec55ef79329117e4ce9a27b4a1c42cb34b4c1ac13/vesta-0.14.0.tar.gz", hash = "sha256:25d9c3faf1a324b789b52ac034b6c15a5aa122b942b6e19b8f88779eb2b18788", size = 19921, upload-time = "2026-04-27T00:37:48.304Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a6/72/599243fc8823c790b9be49861c5fffd16a66b1d7311e18d7d541da631795/vesta-0.14.0-py3-none-any.whl", hash = "sha256:41e8b6e639fc057d93acd387af5bc93ba140011d4819ca8b152a53c6be1d27ec", size = 16806, upload-time = "2026-04-27T00:37:47.068Z" },
+]
+
+[[package]]
 name = "vestaboard-pattern-server"
 version = "0.1.0"
 source = { virtual = "." }
@@ -711,6 +720,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "gunicorn" },
     { name = "uvicorn" },
+    { name = "vesta" },
 ]
 
 [package.metadata]
@@ -720,6 +730,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.141.1" },
     { name = "gunicorn", specifier = ">=26.2.0" },
     { name = "uvicorn", specifier = ">=0.52.4" },
+    { name = "vesta", specifier = ">=0.14.0" },
 ]
 
 [[package]]

@@ -1,4 +1,8 @@
 {
     "patterns_db_path": "/Users/bertrand/code/vestaboard-patterns/data/patterns.db",
-    "tronbyt_api_key": "xxx"
+    "tronbyt_api_key": "xxx",
+    "vestaboard": {
+        "local_api_key": "xxx",
+        "base_url": "http://vestaboard.local:7000"
+    }
 }

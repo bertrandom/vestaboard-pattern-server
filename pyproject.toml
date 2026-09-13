@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.141.1",
     "gunicorn>=26.2.0",
     "uvicorn>=0.52.4",
+    "vesta>=0.14.0",
 ]
 [tool.uv.sources]
 appcfg = { git = "https://github.com/bertrandom/appcfg", rev = "8c4970cbcabede7ea335682a20b9cd217b4ded72" }

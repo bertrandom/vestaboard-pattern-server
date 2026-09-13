@@ -1,3 +1,4 @@
+import base64
 import json
 import logging
 import logging.config
@@ -7,6 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import aiohttp
+import vesta
 from appcfg import get_config
 from fastapi import FastAPI
 
@@ -50,7 +52,6 @@ async def get_date_cursor():
         logger.info(f"Initialized date_cursor in state: {latest_pick_date}")
         return latest_pick_date
 
-
 @asynccontextmanager
 
 async def lifespan(app: FastAPI):
@@ -80,19 +81,27 @@ async def cursor_previous():
     state_cursor.execute("UPDATE state SET value = ? WHERE key = 'date_cursor'", (result[0],))
     state_conn.commit()
 
-    await update_tronbyt()
+    date_cursor = result[0]
 
-    return {"ok": True, "date_cursor": result[0]}
+    await update_tronbyt(date_cursor)
 
-async def update_tronbyt():
-    url = "http://nuke.smittn.com:8000/v0/devices/tidbyt/push_app"
+    return {"ok": True, "date_cursor": date_cursor}
 
-    payload = {"app_id": "vestaboard", "background": False}
+async def update_tronbyt(date_cursor = None):
+    with open(f"data/patterns/{date_cursor}.webp", "rb") as f:
+        encoded = base64.b64encode(f.read()).decode("ascii")
 
-    await app.state.http_session.post(url, json=payload, headers={
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {config['tronbyt_api_key']}"
-    })
+        url = "http://nuke.smittn.com:8000/v0/devices/tidbyt/push"
+
+        payload = {
+            "image": encoded,
+            "background": False
+        }
+
+        await app.state.http_session.post(url, json=payload, headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {config['tronbyt_api_key']}"
+        })
 
 @app.post("/next")
 async def cursor_next():
@@ -111,12 +120,18 @@ async def cursor_next():
     if not result:
         return {"ok": False, "date_cursor": date_cursor}
 
+    date_cursor = result[0]
+
+    if not os.path.exists(f"data/patterns/{date_cursor}.webp"):
+        logger.error(f"Pattern file for date_cursor {date_cursor} does not exist.")
+        return {"ok": False}
+
     state_cursor.execute("UPDATE state SET value = ? WHERE key = 'date_cursor'", (result[0],))
     state_conn.commit()
 
-    await update_tronbyt()
+    await update_tronbyt(date_cursor)
 
-    return {"ok": True, "date_cursor": result[0]}
+    return {"ok": True, "date_cursor": date_cursor}
 
 @app.get("/current")
 async def read_current():
@@ -142,6 +157,59 @@ async def read_current():
 
     return {"ok": True, "date_cursor": date_cursor, "pattern": pattern}
 
+async def update_tronbyt_with_sending():
+    url = "http://nuke.smittn.com:8000/v0/devices/tidbyt/push_app"
+
+    payload = {
+        "app_id": "split-flap",
+        "background": False,
+        "config": {
+            "message": "SENDING VESTA BOARD",
+            "center_text": "true",
+        }
+    }
+
+    await app.state.http_session.post(url, json=payload, headers={
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {config['tronbyt_api_key']}"
+    })
+
+@app.post("/current/send")
+async def send_current():
+
+    date_cursor = await get_date_cursor()
+
+    cursor.execute("""
+        SELECT Message.body
+        FROM Pick
+        JOIN Message ON Pick.message_id = Message.id
+        WHERE Pick.pick_date = ?
+        LIMIT 1
+    """, (date_cursor,))
+    row = cursor.fetchone()
+
+    if not row:
+        logger.error(f"No messages found for pick date: {date_cursor}")
+        return
+
+    raw_pattern = row[0]
+
+    pattern = json.loads(raw_pattern)
+
+    # Filled is 71 but the Vestaboard Local API can't handle this, so we need to replace it with 69 (which is white)
+
+    # Replace all 71 with 69 in pattern
+    for i in range(len(pattern)):
+        for j in range(len(pattern[i])):
+            if pattern[i][j] == 71:
+                pattern[i][j] = 69
+
+    await update_tronbyt_with_sending()
+
+    local_client = vesta.LocalClient(local_api_key=config["vestaboard"]["local_api_key"], base_url=config["vestaboard"]["base_url"])
+    local_client.write_message(pattern)
+
+    return {"ok": True}
 
 @app.get("/")
 async def read_root():
