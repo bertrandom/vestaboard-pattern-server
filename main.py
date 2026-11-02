@@ -13,7 +13,7 @@ from fastapi import FastAPI
 STATE_DB_PATH = Path("data/state.db")
 
 TRONBYT_DEVICE_URL = "http://nuke.smittn.com:8000/v0/devices/tidbyt"
-TRONBYT_INSTALLATION_ID = "vestaboard-109"
+TRONBYT_INSTALLATION_ID = "109"
 
 logger = logging.getLogger(__name__)
 
