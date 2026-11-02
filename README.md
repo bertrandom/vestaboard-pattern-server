@@ -14,7 +14,7 @@ The date cursor is stored in `data/state.db`. Patterns are read from the databas
 
 ## Tronbyt
 
-The preview uses the `vestaboard` app from `~/code/bert-tronbyt/apps/vestaboard`, which
+The preview uses the `vestaboard` app from [bert-tronbyt](https://github.com/bertrandom/bert-tronbyt/) (`apps/vestaboard`), which
 draws the grid from `message_body` in its config. On every cursor move the server:
 
 1. `PATCH`es installation `109` with the new `message_body`, so the app is current in normal rotation
