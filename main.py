@@ -1,8 +1,6 @@
-import base64
 import json
 import logging
 import logging.config
-import os
 import sqlite3
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,6 +11,9 @@ from appcfg import get_config
 from fastapi import FastAPI
 
 STATE_DB_PATH = Path("data/state.db")
+
+TRONBYT_DEVICE_URL = "http://nuke.smittn.com:8000/v0/devices/tidbyt"
+TRONBYT_INSTALLATION_ID = "vestaboard-109"
 
 logger = logging.getLogger(__name__)
 
@@ -88,20 +89,43 @@ async def cursor_previous():
     return {"ok": True, "date_cursor": date_cursor}
 
 async def update_tronbyt(date_cursor = None):
-    with open(f"data/patterns/{date_cursor}.webp", "rb") as f:
-        encoded = base64.b64encode(f.read()).decode("ascii")
+    cursor.execute("""
+        SELECT Message.body
+        FROM Pick
+        JOIN Message ON Pick.message_id = Message.id
+        WHERE Pick.pick_date = ?
+        LIMIT 1
+    """, (date_cursor,))
+    row = cursor.fetchone()
 
-        url = "http://nuke.smittn.com:8000/v0/devices/tidbyt/push"
+    if not row:
+        logger.error(f"No messages found for pick date: {date_cursor}")
+        return
 
-        payload = {
-            "image": encoded,
-            "background": False
-        }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {config['tronbyt_api_key']}"
+    }
 
-        await app.state.http_session.post(url, json=payload, headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {config['tronbyt_api_key']}"
-        })
+    # Save the pattern on the installation so it stays current in rotation
+    url = f"{TRONBYT_DEVICE_URL}/installations/{TRONBYT_INSTALLATION_ID}"
+
+    async with app.state.http_session.patch(url, json={"config": {"message_body": row[0]}}, headers=headers) as resp:
+        if resp.status >= 400:
+            logger.error(f"Tronbyt installation update failed: {resp.status} {await resp.text()}")
+            return
+
+    # Render the installation with its saved config and show it immediately
+    url = f"{TRONBYT_DEVICE_URL}/push_app"
+
+    payload = {
+        "installationID": TRONBYT_INSTALLATION_ID,
+        "background": False
+    }
+
+    async with app.state.http_session.post(url, json=payload, headers=headers) as resp:
+        if resp.status >= 400:
+            logger.error(f"Tronbyt push_app failed: {resp.status} {await resp.text()}")
 
 @app.post("/next")
 async def cursor_next():
@@ -121,10 +145,6 @@ async def cursor_next():
         return {"ok": False, "date_cursor": date_cursor}
 
     date_cursor = result[0]
-
-    if not os.path.exists(f"data/patterns/{date_cursor}.webp"):
-        logger.error(f"Pattern file for date_cursor {date_cursor} does not exist.")
-        return {"ok": False}
 
     state_cursor.execute("UPDATE state SET value = ? WHERE key = 'date_cursor'", (result[0],))
     state_conn.commit()
@@ -158,7 +178,7 @@ async def read_current():
     return {"ok": True, "date_cursor": date_cursor, "pattern": pattern}
 
 async def update_tronbyt_with_sending():
-    url = "http://nuke.smittn.com:8000/v0/devices/tidbyt/push_app"
+    url = f"{TRONBYT_DEVICE_URL}/push_app"
 
     payload = {
         "app_id": "split-flap",
