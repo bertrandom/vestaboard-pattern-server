@@ -14,6 +14,7 @@ STATE_DB_PATH = Path("data/state.db")
 
 TRONBYT_DEVICE_URL = "http://nuke.smittn.com:8000/v0/devices/tidbyt"
 TRONBYT_INSTALLATION_ID = "109"
+TRONBYT_APP_ID = "vestaboard"
 
 logger = logging.getLogger(__name__)
 
@@ -115,12 +116,15 @@ async def update_tronbyt(date_cursor = None):
             logger.error(f"Tronbyt installation update failed: {resp.status} {await resp.text()}")
             return
 
-    # Render the installation with its saved config and show it immediately
+    # Render the app with this pattern and show it immediately. Don't pass
+    # installationID: Tronbyt then tracks a separate "pushed" app and re-sends its
+    # first cached image on every later push instead of re-rendering.
     url = f"{TRONBYT_DEVICE_URL}/push_app"
 
     payload = {
-        "installationID": TRONBYT_INSTALLATION_ID,
-        "background": False
+        "app_id": TRONBYT_APP_ID,
+        "background": False,
+        "config": {"message_body": row[0]}
     }
 
     async with app.state.http_session.post(url, json=payload, headers=headers) as resp:
